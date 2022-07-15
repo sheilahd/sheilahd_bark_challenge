@@ -1,11 +1,19 @@
 class DogsController < ApplicationController
+  
   before_action :set_dog, only: [:show, :edit, :update, :destroy]
+  before_action :require_permission, only: :edit
+
+  after_action :verify_authorized, except: :index
+  after_action :verify_policy_scoped, only: :index
+
 
   # GET /dogs
   # GET /dogs.json
   def index
-    @dogs = Dog.all
+    @dogs = policy_scope(Dog).reverse
+    @dogs = Dog.paginate(page: params[:page], per_page: 5)
   end
+
 
   # GET /dogs/1
   # GET /dogs/1.json
@@ -14,17 +22,22 @@ class DogsController < ApplicationController
 
   # GET /dogs/new
   def new
-    @dog = Dog.new
+    @dog = current_user.dogs.new
+    authorize @dog
   end
 
   # GET /dogs/1/edit
   def edit
+    # @dog = current_user.dogs.find(params[:id])
+    @dog = Dog.find(params[:id])
+   
   end
 
   # POST /dogs
   # POST /dogs.json
   def create
-    @dog = Dog.new(dog_params)
+    @dog = current_user.dogs.create(dog_params)
+    authorize @dog
 
     respond_to do |format|
       if @dog.save
@@ -70,10 +83,17 @@ class DogsController < ApplicationController
   # Use callbacks to share common setup or constraints between actions.
   def set_dog
     @dog = Dog.find(params[:id])
+    authorize @dog
   end
 
   # Never trust parameters from the scary internet, only allow the white list through.
   def dog_params
-    params.require(:dog).permit(:name, :description, :images)
+    params.require(:dog).permit(:name, :description, images: [])
   end
+  # def require_permission
+  #   if current_user != Dog.find(params[:id]).user
+  #     redirect_to root_path
+  #     #Or do something else here
+  #   end
+  # end
 end
